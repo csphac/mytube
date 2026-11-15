@@ -14,7 +14,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-14
+          # Arm64 macOS runners are unavailable for private repos on the Free
+          # plan; Intel runners cross-build both dmgs (no native compilation).
+          - os: macos-13
             arch: arm64
           - os: macos-13
             arch: x64
