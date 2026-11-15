@@ -7,8 +7,14 @@ const { promisify } = require('util');
 
 const execFileAsync = promisify(execFile);
 
-const YT_DLP_URL =
-  'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
+const YT_DLP_ASSETS = {
+  darwin: 'yt-dlp_macos',
+  linux: 'yt-dlp_linux',
+  win32: 'yt-dlp.exe',
+};
+const YT_DLP_URL = `https://github.com/yt-dlp/yt-dlp/releases/latest/download/${
+  YT_DLP_ASSETS[process.platform] || 'yt-dlp'
+}`;
 
 function binDir() {
   const dir = path.join(app.getPath('userData'), 'bin');

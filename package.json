@@ -6,6 +6,9 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "test": "electron test/review-fixes.js",
+    "test:e2e": "electron test/e2e.js",
+    "test:ui": "node test/ui-test.js",
     "dist": "electron-builder --mac"
   },
   "author": "",

@@ -172,7 +172,8 @@ async function main() {
     await assert.rejects(
       downloadAll(
         {
-          url: 'https://www.youtube.com/watch?v=00000000000',
+          // connection-refused local port: fails fast without external network
+          url: 'http://127.0.0.1:9/watch?v=x',
           outputDir: out,
           info: { title: 'Fail Case', duration: 0 },
           video: { enabled: true, height: 360 },
