@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' https: data: media:; connect-src 'self' media:; style-src 'self'" />
+  <title>MyTube</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <span class="logo-mark">&#9654;</span>
+      <div>
+        <h1>MyTube</h1>
+        <p>Videos &middot; Transcripts &middot; Slides</p>
+      </div>
+    </div>
+    <div id="tools-status" class="tools-status">Preparing tools&hellip;</div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <button id="new-download-btn" class="btn nav-btn">+ New download</button>
+      <div class="lib-head">
+        <span>Library</span>
+        <button id="refresh-btn" class="icon-btn" title="Refresh library">&#8635;</button>
+      </div>
+      <div id="lib-list" class="lib-list"></div>
+      <div id="lib-empty" class="lib-empty hidden">Nothing downloaded yet.</div>
+    </aside>
+
+    <main>
+      <div id="download-view">
+        <section class="url-row">
+          <input id="url" type="url" placeholder="Paste a YouTube URL, e.g. https://www.youtube.com/watch?v=..."
+                 spellcheck="false" autocomplete="off" />
+          <button id="fetch-btn" class="btn">Fetch</button>
+        </section>
+
+        <section id="info-card" class="info-card hidden">
+          <img id="thumb" alt="" />
+          <div class="info-text">
+            <h2 id="title"></h2>
+            <p id="meta"></p>
+          </div>
+        </section>
+
+        <section id="options" class="options hidden">
+          <div class="option-card" id="card-video">
+            <label class="option-head">
+              <input type="checkbox" id="opt-video" checked />
+              <span>Video</span>
+            </label>
+            <div class="option-body">
+              <label for="quality">Quality</label>
+              <select id="quality">
+                <option value="0">Best available</option>
+                <option value="2160">2160p (4K)</option>
+                <option value="1440">1440p</option>
+                <option value="1080" selected>1080p</option>
+                <option value="720">720p</option>
+                <option value="480">480p</option>
+                <option value="360">360p</option>
+              </select>
+              <p class="hint">Saved as MP4 with audio merged in.</p>
+            </div>
+          </div>
+
+          <div class="option-card" id="card-transcript">
+            <label class="option-head">
+              <input type="checkbox" id="opt-transcript" checked />
+              <span>Transcript</span>
+            </label>
+            <div class="option-body">
+              <label for="lang">Language</label>
+              <select id="lang"></select>
+              <p class="hint" id="lang-hint">Plain text + SRT with timestamps. Auto-generated captions used when no manual ones exist.</p>
+            </div>
+          </div>
+
+          <div class="option-card" id="card-slides">
+            <label class="option-head">
+              <input type="checkbox" id="opt-slides" />
+              <span>Slides</span>
+            </label>
+            <div class="option-body">
+              <label for="sensitivity">Scene sensitivity</label>
+              <select id="sensitivity">
+                <option value="0.4">Low &mdash; major changes only</option>
+                <option value="0.3" selected>Medium &mdash; typical slides</option>
+                <option value="0.2">High &mdash; catch small changes</option>
+              </select>
+              <p class="hint">Captures a JPEG whenever the on-screen slide changes. Requires the video download.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="dest-row" class="dest-row hidden">
+          <span class="dest-label">Save to</span>
+          <span id="dest-path" class="dest-path"></span>
+          <button id="pick-btn" class="btn btn-ghost">Change&hellip;</button>
+        </section>
+
+        <section id="action-row" class="action-row hidden">
+          <button id="download-btn" class="btn btn-primary">Download</button>
+          <button id="cancel-btn" class="btn btn-ghost hidden">Cancel</button>
+        </section>
+
+        <section id="progress-panel" class="progress-panel hidden">
+          <div class="progress-head">
+            <span id="stage-label"></span>
+            <span id="percent-label"></span>
+          </div>
+          <div class="progress-track"><div id="progress-bar"></div></div>
+          <pre id="log"></pre>
+        </section>
+
+        <section id="done-panel" class="done-panel hidden">
+          <div id="done-text"></div>
+          <button id="open-btn" class="btn">Open Folder</button>
+        </section>
+
+        <section id="error-panel" class="error-panel hidden"></section>
+      </div>
+
+      <div id="detail-view" class="hidden">
+        <section class="detail-head">
+          <img id="d-thumb" alt="" />
+          <div class="info-text">
+            <h2 id="d-title"></h2>
+            <p id="d-meta"></p>
+            <p id="d-folder" class="hint"></p>
+          </div>
+        </section>
+
+        <section class="detail-actions">
+          <button id="d-open-folder" class="btn">Open Folder</button>
+        </section>
+
+        <section id="d-video" class="detail-block hidden">
+          <h3>Video</h3>
+          <p id="d-video-info" class="hint"></p>
+          <div class="btn-row">
+            <button id="d-play" class="btn btn-primary">Play</button>
+            <button id="d-show-video" class="btn btn-ghost">Show in Finder</button>
+          </div>
+        </section>
+
+        <section id="d-transcript" class="detail-block hidden">
+          <h3>Transcript</h3>
+          <div class="btn-row">
+            <button id="d-open-txt" class="btn">Open .txt</button>
+            <button id="d-open-srt" class="btn btn-ghost">Open .srt</button>
+          </div>
+          <pre id="d-transcript-text"></pre>
+        </section>
+
+        <section id="d-slides" class="detail-block hidden">
+          <h3>Slides <span id="d-slide-count" class="count-chip"></span></h3>
+          <div class="btn-row">
+            <button id="d-open-gallery" class="btn">Open gallery</button>
+          </div>
+          <div id="d-slide-grid" class="slide-grid"></div>
+          <p id="d-slide-more" class="hint hidden"></p>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
