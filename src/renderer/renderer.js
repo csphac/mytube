@@ -42,6 +42,7 @@ const els = {
   dMeta: $('d-meta'),
   dFolder: $('d-folder'),
   dOpenFolder: $('d-open-folder'),
+  dDelete: $('d-delete'),
   dVideo: $('d-video'),
   dVideoInfo: $('d-video-info'),
   dPlay: $('d-play'),
@@ -55,6 +56,11 @@ const els = {
   dOpenGallery: $('d-open-gallery'),
   dSlideGrid: $('d-slide-grid'),
   dSlideMore: $('d-slide-more'),
+  deleteOverlay: $('delete-overlay'),
+  deleteText: $('delete-text'),
+  deleteCancel: $('delete-cancel'),
+  deleteConfirm: $('delete-confirm'),
+  toast: $('toast'),
 };
 
 let info = null;
@@ -64,6 +70,11 @@ let doneFolder = '';
 let transcriptAvailable = false;
 let libraryItems = [];
 let currentItem = null;
+let deleteTarget = null;
+let toastTimer = null;
+
+const TRASH_SVG =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
 
 function show(el, visible) {
   el.classList.toggle('hidden', !visible);
@@ -166,9 +177,12 @@ function renderLibrary() {
   els.libList.innerHTML = '';
   show(els.libEmpty, libraryItems.length === 0);
   for (const item of libraryItems) {
+    const row = document.createElement('div');
+    row.className = 'lib-item';
+    if (currentItem && currentItem.folder === item.folder) row.classList.add('active');
+
     const btn = document.createElement('button');
-    btn.className = 'lib-item';
-    if (currentItem && currentItem.folder === item.folder) btn.classList.add('active');
+    btn.className = 'lib-main';
 
     const thumbSrc = itemThumb(item);
     if (thumbSrc) {
@@ -211,7 +225,17 @@ function renderLibrary() {
     btn.appendChild(text);
 
     btn.addEventListener('click', () => selectItem(item));
-    els.libList.appendChild(btn);
+
+    const del = document.createElement('button');
+    del.className = 'del-btn';
+    del.title = 'Delete download';
+    del.setAttribute('aria-label', 'Delete ' + item.title);
+    del.innerHTML = TRASH_SVG;
+    del.addEventListener('click', () => openDeleteDialog(item));
+
+    row.appendChild(btn);
+    row.appendChild(del);
+    els.libList.appendChild(row);
   }
 }
 
@@ -219,6 +243,51 @@ async function loadLibrary() {
   const result = await window.mytube.libraryList();
   libraryItems = result.ok ? result.items : [];
   renderLibrary();
+}
+
+function showToast(message) {
+  els.toast.textContent = message;
+  show(els.toast, true);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => show(els.toast, false), 2600);
+}
+
+function openDeleteDialog(item) {
+  deleteTarget = item;
+  els.deleteText.textContent = '';
+  const strong = document.createElement('strong');
+  strong.textContent = `“${item.title}”`;
+  els.deleteText.appendChild(strong);
+  els.deleteText.appendChild(
+    document.createTextNode(
+      ' will be permanently removed from disk — video, transcript and slides. This cannot be undone.'
+    )
+  );
+  els.deleteConfirm.disabled = false;
+  show(els.deleteOverlay, true);
+  els.deleteCancel.focus();
+}
+
+function closeDeleteDialog() {
+  show(els.deleteOverlay, false);
+  deleteTarget = null;
+}
+
+async function confirmDelete() {
+  const item = deleteTarget;
+  if (!item) return;
+  els.deleteConfirm.disabled = true;
+  const result = await window.mytube.libraryDelete(item.folder);
+  els.deleteConfirm.disabled = false;
+  if (!result.ok) {
+    els.deleteText.textContent = 'Delete failed: ' + result.error;
+    return;
+  }
+  closeDeleteDialog();
+  libraryItems = libraryItems.filter((it) => it.folder !== item.folder);
+  if (currentItem && currentItem.folder === item.folder) showView('download');
+  renderLibrary();
+  showToast(`Deleted “${item.title}”`);
 }
 
 async function selectItem(item) {
@@ -460,6 +529,19 @@ els.dOpenSrt.addEventListener('click', () => {
 });
 els.dOpenGallery.addEventListener('click', () => {
   if (currentItem?.slides.gallery) window.mytube.openPath(currentItem.slides.gallery);
+});
+els.dDelete.addEventListener('click', () => {
+  if (currentItem) openDeleteDialog(currentItem);
+});
+els.deleteCancel.addEventListener('click', closeDeleteDialog);
+els.deleteConfirm.addEventListener('click', confirmDelete);
+els.deleteOverlay.addEventListener('click', (e) => {
+  if (e.target === els.deleteOverlay) closeDeleteDialog();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !els.deleteOverlay.classList.contains('hidden')) {
+    closeDeleteDialog();
+  }
 });
 
 init();
