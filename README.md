@@ -8,6 +8,7 @@ A macOS Electron app that archives YouTube lectures: paste a video URL and it do
 - **Transcripts** — plain-text `transcript.txt` plus per-language `.srt` files, with language selection when multiple tracks exist.
 - **Slides** — JPEG frames captured at scene changes (timestamped filenames) with a generated HTML gallery, ideal for lecture/presentation videos.
 - **Library** — left-hand sidebar of everything downloaded, with a detail view: inline video playback, transcript preview, and slide gallery. Custom output folders are remembered as library roots.
+- **Delete** — remove downloads you no longer need via the trash icon on a library row (or `Delete…` in the detail view); a confirmation dialog guards the permanent removal of the folder from disk.
 - **Resilient tooling** — yt-dlp is auto-downloaded on first launch and validated with a `--version` probe (corrupt binaries are removed and re-fetched); ffmpeg ships bundled via `ffmpeg-static`.
 
 ## Requirements
@@ -46,9 +47,10 @@ Downloads land in `~/Downloads/MyTube/<video title>/` by default (or any folder 
 
 | Command | What it does |
 | --- | --- |
-| `npm test` | 10 fault-injection regression tests (path escapes, killed connections, hanging servers, corrupt binaries, symlink containment, …) |
+| `npm test` | 12 fault-injection regression tests (path escapes, killed connections, hanging servers, corrupt binaries, symlink containment, delete guards, …) |
 | `npm run test:e2e` | Real end-to-end download of "Me at the zoo" into `test/output/` |
 | `npm run test:ui` | Drives the real UI over Chrome DevTools Protocol: fetch → download → library → detail, with screenshots |
+| `npm run test:ui-delete` | CDP proof of the delete flow: trash icon → dialog → Escape/Cancel → detail Delete → confirm, with screenshots |
 
 The regression and e2e suites run under Electron; the UI test needs the app running with `--remote-debugging-port=9222` (see `test/ui-test.js`).
 

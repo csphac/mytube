@@ -102,19 +102,51 @@ header {
 
 .lib-item {
   display: flex;
-  gap: 10px;
   align-items: center;
-  width: 100%;
-  text-align: left;
-  background: transparent;
+  gap: 2px;
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 8px;
-  cursor: pointer;
-  color: var(--text);
+  padding: 4px;
 }
 .lib-item:hover { background: var(--panel); }
 .lib-item.active { background: var(--panel); border-color: var(--accent); }
+
+.lib-main {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+}
+
+.del-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.lib-item:hover .del-btn,
+.lib-item:focus-within .del-btn { opacity: 1; }
+.del-btn:hover { color: var(--accent); background: var(--accent-soft); }
+@media (hover: none) {
+  .del-btn { opacity: 1; }
+}
 
 .lib-thumb {
   width: 64px;
@@ -211,6 +243,65 @@ input[type="url"]:focus { border-color: var(--accent); }
 .btn-primary:hover { background: #ff6666; }
 
 .btn-ghost { background: transparent; }
+
+.btn-danger {
+  background: transparent;
+  border-color: rgba(255, 77, 77, 0.4);
+  color: var(--accent);
+}
+.btn-danger:hover { background: var(--accent-soft); }
+
+.btn-danger-solid {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-danger-solid:hover { background: #ff6666; }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.66);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+
+.dialog {
+  width: min(400px, 90vw);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dialog h3 { font-size: 15px; font-weight: 600; }
+.dialog p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.dialog p strong { color: var(--text); font-weight: 600; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
+.toast {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  z-index: 60;
+  max-width: 90vw;
+}
 
 .info-card {
   display: flex;

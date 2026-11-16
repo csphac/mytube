@@ -13,6 +13,7 @@ const {
   isInsideRoots,
   scanLibrary,
   readTranscriptPreview,
+  deleteItem,
 } = require('./library');
 
 protocol.registerSchemesAsPrivileged([
@@ -159,6 +160,15 @@ app.whenReady().then(() => {
   ipcMain.handle('library:transcript', (_e, folder) => {
     try {
       return { ok: true, text: readTranscriptPreview(folder) };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('library:delete', (_e, folder) => {
+    try {
+      deleteItem(folder);
+      return { ok: true };
     } catch (err) {
       return { ok: false, error: err.message };
     }

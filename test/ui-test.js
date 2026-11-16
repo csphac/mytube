@@ -99,7 +99,7 @@ async function main() {
   console.log('library items:', await evaluate(`document.querySelectorAll('.lib-item').length`));
   await shot('ui-05-library');
 
-  await evaluate(`document.querySelector('.lib-item').click(); true;`);
+  await evaluate(`document.querySelector('.lib-item .lib-main').click(); true;`);
   await sleep(1500);
   console.log('detail title:', await evaluate(`document.getElementById('d-title').textContent`));
   console.log('slide img naturalWidth:', await evaluate(`(() => { const i = document.querySelector('#d-slide-grid img'); return i ? i.naturalWidth : -1; })()`));

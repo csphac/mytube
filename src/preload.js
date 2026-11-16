@@ -18,5 +18,6 @@ contextBridge.exposeInMainWorld('mytube', {
   showItem: (p) => ipcRenderer.invoke('shell:showItem', p),
   libraryList: () => ipcRenderer.invoke('library:list'),
   libraryTranscript: (folder) => ipcRenderer.invoke('library:transcript', folder),
+  libraryDelete: (folder) => ipcRenderer.invoke('library:delete', folder),
   onDownloadEvent: (cb) => subscribe('download:event', cb),
 });

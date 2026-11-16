@@ -144,6 +144,16 @@ function readTranscriptPreview(folder) {
   return text.length > 100000 ? text.slice(0, 100000) + '\n…' : text;
 }
 
+function deleteItem(folder) {
+  if (!isInsideRoots(folder)) throw new Error('Path outside library folders');
+  const resolved = realPath(folder);
+  if (getRoots().some((root) => realPath(root) === resolved)) {
+    throw new Error('Cannot delete a library root folder');
+  }
+  if (!inspectFolder(folder)) throw new Error('Not a downloaded item');
+  fs.rmSync(folder, { recursive: true, force: true });
+}
+
 function writeMeta(folder, info) {
   fs.writeFileSync(
     path.join(folder, 'meta.json'),
@@ -168,5 +178,6 @@ module.exports = {
   scanLibrary,
   inspectFolder,
   readTranscriptPreview,
+  deleteItem,
   writeMeta,
 };

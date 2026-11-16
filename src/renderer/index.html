@@ -136,6 +136,7 @@
 
         <section class="detail-actions">
           <button id="d-open-folder" class="btn">Open Folder</button>
+          <button id="d-delete" class="btn btn-danger">Delete&hellip;</button>
         </section>
 
         <section id="d-video" class="detail-block hidden">
@@ -167,6 +168,19 @@
       </div>
     </main>
   </div>
+
+  <div id="delete-overlay" class="overlay hidden">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
+      <h3 id="delete-dialog-title">Delete this download?</h3>
+      <p id="delete-text"></p>
+      <div class="dialog-actions">
+        <button id="delete-cancel" class="btn">Cancel</button>
+        <button id="delete-confirm" class="btn btn-danger-solid">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status"></div>
 
   <script src="renderer.js"></script>
 </body>

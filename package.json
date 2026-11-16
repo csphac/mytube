@@ -9,6 +9,7 @@
     "test": "electron test/review-fixes.js",
     "test:e2e": "electron test/e2e.js",
     "test:ui": "node test/ui-test.js",
+    "test:ui-delete": "node test/ui-delete-test.js",
     "dist": "electron-builder --mac"
   },
   "author": "",

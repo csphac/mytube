@@ -20,7 +20,7 @@ const {
   srtToText,
 } = require('../src/downloader');
 const { ensureTools, ytDlpPath, binDir, httpDownload } = require('../src/binaries');
-const { addRoot, isInsideRoots, inspectFolder } = require('../src/library');
+const { addRoot, isInsideRoots, inspectFolder, deleteItem } = require('../src/library');
 
 let failures = 0;
 async function test(name, fn) {
@@ -191,6 +191,34 @@ async function main() {
     fs.writeFileSync(ytDlpPath(), 'this is not a binary');
     await assert.rejects(ensureTools(), /corrupt/i);
     assert.ok(!fs.existsSync(ytDlpPath()));
+  });
+
+  await test('16 delete removes the item folder from disk', async () => {
+    const root = path.join(tmp, 'del-root');
+    const folder = path.join(root, 'Some Lecture');
+    fs.mkdirSync(path.join(folder, 'slides'), { recursive: true });
+    fs.writeFileSync(path.join(folder, 'meta.json'), '{"title":"Some Lecture"}');
+    fs.writeFileSync(path.join(folder, 'transcript.txt'), 'hello');
+    fs.writeFileSync(path.join(folder, 'video.mp4'), 'x');
+    fs.writeFileSync(path.join(folder, 'slides', 'slide_0001.jpg'), 'x');
+    addRoot(root);
+    deleteItem(folder);
+    assert.ok(!fs.existsSync(folder));
+    assert.ok(fs.existsSync(root));
+  });
+
+  await test('17 delete refuses outside paths, roots, and non-item folders', async () => {
+    const root = path.join(tmp, 'del-guard');
+    const plain = path.join(root, 'not-an-item');
+    fs.mkdirSync(plain, { recursive: true });
+    fs.writeFileSync(path.join(plain, 'notes.txt'), 'x');
+    addRoot(root);
+    assert.throws(() => deleteItem('/etc'), /outside library/i);
+    assert.throws(() => deleteItem(root), /root folder/i);
+    assert.throws(() => deleteItem(plain), /Not a downloaded item/i);
+    assert.throws(() => deleteItem(path.join(root, '..', 'key.pem')), /outside library/i);
+    assert.ok(fs.existsSync(plain));
+    assert.ok(fs.existsSync(root));
   });
 
   console.log(failures === 0 ? 'ALL REVIEW-FIX TESTS PASSED' : `${failures} FAILURES`);
