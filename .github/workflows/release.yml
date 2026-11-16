@@ -14,12 +14,12 @@ jobs:
     strategy:
       matrix:
         include:
-          # Standard arm64 macOS runners are unavailable for private repos on
-          # the Free plan, and macos-13/14 images are retired. The Intel
-          # macos-15-large runner cross-builds both dmgs (no native code).
-          - os: macos-15-large
+          # Standard arm64 runners are free for public repos. No standard
+          # Intel macOS image remains (macos-13 retired), so the x64 dmg is
+          # cross-built on the same arm64 host (no native compilation).
+          - os: macos-15
             arch: arm64
-          - os: macos-15-large
+          - os: macos-15
             arch: x64
     runs-on: ${{ matrix.os }}
     steps:
