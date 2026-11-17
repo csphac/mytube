@@ -15,7 +15,6 @@ const els = {
   quality: $('quality'),
   lang: $('lang'),
   langHint: $('lang-hint'),
-  sensitivity: $('sensitivity'),
   destRow: $('dest-row'),
   destPath: $('dest-path'),
   pickBtn: $('pick-btn'),
@@ -150,7 +149,7 @@ function setBusy(busy) {
   els.url.disabled = busy;
   els.downloadBtn.disabled = busy;
   els.pickBtn.disabled = busy;
-  [els.optVideo, els.optTranscript, els.optSlides, els.quality, els.lang, els.sensitivity].forEach(
+  [els.optVideo, els.optTranscript, els.optSlides, els.quality, els.lang].forEach(
     (el) => (el.disabled = busy)
   );
   show(els.cancelBtn, busy);
@@ -208,7 +207,7 @@ function renderLibrary() {
     const badges = [
       ['V', !!item.video, 'Video'],
       ['T', !!(item.transcript.txt || item.transcript.srt), 'Transcript'],
-      ['S', item.slides.files.length > 0, 'Slides'],
+      ['S', item.slides.count > 0, 'Slides'],
     ];
     for (const [letter, on, label] of badges) {
       const b = document.createElement('span');
@@ -330,26 +329,38 @@ async function selectItem(item) {
     }
   }
 
-  const slideCount = item.slides.files.length;
+  const slides = item.slides;
+  const slideCount = slides.count || slides.files.length;
   show(els.dSlides, slideCount > 0);
   if (slideCount > 0) {
     els.dSlideCount.textContent = slideCount;
-    els.dOpenGallery.disabled = !item.slides.gallery;
+    els.dOpenGallery.textContent = slides.file
+      ? 'Open ' + slides.file.split('/').pop()
+      : 'Open gallery';
+    els.dOpenGallery.disabled = !slides.file && !slides.gallery;
     els.dSlideGrid.innerHTML = '';
-    const preview = item.slides.files.slice(0, 12);
-    for (const file of preview) {
-      const img = document.createElement('img');
-      img.src = mediaUrl(item.slides.dir + '/' + file);
-      img.alt = file;
-      img.title = file;
-      img.addEventListener('click', () =>
-        window.mytube.openPath(item.slides.dir + '/' + file)
-      );
-      els.dSlideGrid.appendChild(img);
-    }
-    show(els.dSlideMore, slideCount > preview.length);
-    if (slideCount > preview.length) {
-      els.dSlideMore.textContent = `+ ${slideCount - preview.length} more — open the gallery to see all.`;
+    if (slides.file) {
+      show(els.dSlideGrid, false);
+      show(els.dSlideMore, true);
+      els.dSlideMore.textContent =
+        'All slides are saved as a single PDF — one page per slide, with video timestamps as bookmarks.';
+    } else {
+      show(els.dSlideGrid, true);
+      const preview = slides.files.slice(0, 12);
+      for (const file of preview) {
+        const img = document.createElement('img');
+        img.src = mediaUrl(slides.dir + '/' + file);
+        img.alt = file;
+        img.title = file;
+        img.addEventListener('click', () =>
+          window.mytube.openPath(slides.dir + '/' + file)
+        );
+        els.dSlideGrid.appendChild(img);
+      }
+      show(els.dSlideMore, slideCount > preview.length);
+      if (slideCount > preview.length) {
+        els.dSlideMore.textContent = `+ ${slideCount - preview.length} more — open the gallery to see all.`;
+      }
     }
   }
 }
@@ -467,7 +478,6 @@ async function startDownload() {
     },
     slides: {
       enabled: els.optSlides.checked,
-      threshold: Number(els.sensitivity.value),
     },
   };
 
@@ -528,7 +538,11 @@ els.dOpenSrt.addEventListener('click', () => {
   if (currentItem?.transcript.srt) window.mytube.openPath(currentItem.transcript.srt);
 });
 els.dOpenGallery.addEventListener('click', () => {
-  if (currentItem?.slides.gallery) window.mytube.openPath(currentItem.slides.gallery);
+  if (currentItem?.slides.file) {
+    window.mytube.openPath(currentItem.slides.file);
+  } else if (currentItem?.slides.gallery) {
+    window.mytube.openPath(currentItem.slides.gallery);
+  }
 });
 els.dDelete.addEventListener('click', () => {
   if (currentItem) openDeleteDialog(currentItem);

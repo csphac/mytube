@@ -24,7 +24,7 @@ app.whenReady().then(async () => {
         info: { title: info.title, duration: info.duration },
         video: { enabled: true, height: 360 },
         transcript: { enabled: true, lang: info.languages[0]?.code || 'en' },
-        slides: { enabled: true, threshold: 0.3 },
+        slides: { enabled: true },
       },
       (e) => console.log('EVENT', JSON.stringify(e))
     );

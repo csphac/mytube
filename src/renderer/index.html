@@ -85,13 +85,7 @@
               <span>Slides</span>
             </label>
             <div class="option-body">
-              <label for="sensitivity">Scene sensitivity</label>
-              <select id="sensitivity">
-                <option value="0.4">Low &mdash; major changes only</option>
-                <option value="0.3" selected>Medium &mdash; typical slides</option>
-                <option value="0.2">High &mdash; catch small changes</option>
-              </select>
-              <p class="hint">Captures a JPEG whenever the on-screen slide changes. Requires the video download.</p>
+              <p class="hint">Every slide is captured automatically as it appears &mdash; including small changes and handwritten notes &mdash; and saved as a single <code>slides.pdf</code>. Nothing to tune. Videos without slides just get a cover frame. Requires the video download.</p>
             </div>
           </div>
         </section>
@@ -160,7 +154,7 @@
         <section id="d-slides" class="detail-block hidden">
           <h3>Slides <span id="d-slide-count" class="count-chip"></span></h3>
           <div class="btn-row">
-            <button id="d-open-gallery" class="btn">Open gallery</button>
+            <button id="d-open-gallery" class="btn">Open slides</button>
           </div>
           <div id="d-slide-grid" class="slide-grid"></div>
           <p id="d-slide-more" class="hint hidden"></p>
