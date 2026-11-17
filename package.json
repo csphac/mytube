@@ -7,6 +7,7 @@
   "scripts": {
     "start": "electron .",
     "test": "electron test/review-fixes.js",
+    "test:slides": "node test/slides-detector.js && node test/pdf.js",
     "test:e2e": "electron test/e2e.js",
     "test:ui": "node test/ui-test.js",
     "test:ui-delete": "node test/ui-delete-test.js",
@@ -35,5 +36,9 @@
       "target": "dmg",
       "category": "public.app-category.utilities"
     }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true,
+    "ffmpeg-static@5.3.0": true
   }
 }

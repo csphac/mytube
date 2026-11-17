@@ -1,8 +1,16 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { ytDlpPath, binDir } = require('./binaries');
-const { writeMeta } = require('./library');
+const { buildPdf } = require('./pdf');
+const {
+  createSlideDetector,
+  PROBE_W,
+  PROBE_H,
+  PROBE_FPS,
+} = require('./slide-detector');
+const { writeMeta, updateMeta } = require('./library');
 
 const activeChildren = new Set();
 let cancelled = false;
@@ -16,7 +24,7 @@ function cancelAll() {
   }
 }
 
-function run(cmd, args, { onLine } = {}) {
+function run(cmd, args, { onLine, onData } = {}) {
   return new Promise((resolve, reject) => {
     if (cancelled) return reject(new Error('Cancelled'));
     const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -25,7 +33,8 @@ function run(cmd, args, { onLine } = {}) {
     let stderr = '';
     let errLineBuf = '';
     child.stdout.on('data', (d) => {
-      stdout += d.toString();
+      if (onData) onData(d);
+      else stdout += d.toString();
     });
     child.stderr.on('data', (d) => {
       const text = d.toString();
@@ -235,72 +244,110 @@ function fmtTime(seconds) {
   return `${pad(Math.floor(s / 3600))}-${pad(Math.floor((s % 3600) / 60))}-${pad(s % 60)}`;
 }
 
-async function extractSlides(videoFile, folder, threshold, duration, emit) {
-  const slidesDir = path.join(folder, 'slides');
-  fs.mkdirSync(slidesDir, { recursive: true });
-  emit({ percent: 0, message: 'Extracting slides…' });
-  const times = [];
-  const args = [
-    '-hide_banner',
-    '-i', videoFile,
-    '-vf', `select='eq(n,0)+gt(scene,${threshold})',showinfo`,
-    '-fps_mode', 'vfr',
-    '-q:v', '2',
-    path.join(slidesDir, 'slide_%04d.jpg'),
-  ];
-  await run(binDir() + '/ffmpeg', args, {
-    onLine: (line) => {
-      const pts = line.match(/pts_time:([\d.]+)/);
-      if (pts) times.push(Number(pts[1]));
-      const t = line.match(/time=(\d+):(\d+):([\d.]+)/);
-      if (t && duration) {
-        const secs = Number(t[1]) * 3600 + Number(t[2]) * 60 + Number(t[3]);
+// Slide capture is fully automatic (see slide-detector.js). The video is
+// probed once as a tiny RGB stream to find the moments where the on-screen
+// content changed and settled, then a full-resolution frame is grabbed at
+// each of those timestamps and all of them are packed into a single
+// slides.pdf (one page per captured frame). Videos without slides yield just
+// a cover frame.
+async function extractSlides(videoFile, folder, duration, emit) {
+  emit({ percent: 0, message: 'Detecting slides…' });
+  const detector = createSlideDetector();
+  const candidates = [];
+  const frameBytes = PROBE_W * PROBE_H * 3;
+  let pending = Buffer.alloc(0);
+  let frames = 0;
+
+  await run(
+    binDir() + '/ffmpeg',
+    [
+      '-hide_banner',
+      '-i', videoFile,
+      '-vf', `scale=${PROBE_W}:${PROBE_H},fps=${PROBE_FPS},format=rgb24`,
+      '-f', 'rawvideo',
+      '-',
+    ],
+    {
+      onData: (chunk) => {
+        pending = pending.length ? Buffer.concat([pending, chunk]) : chunk;
+        while (pending.length >= frameBytes) {
+          const rgb = pending.subarray(0, frameBytes);
+          pending = pending.subarray(frameBytes);
+          const hit = detector.push(frames / PROBE_FPS, rgb);
+          frames++;
+          if (hit) candidates.push(hit);
+        }
+      },
+      onLine: (line) => {
+        const t = line.match(/time=(\d+):(\d+):([\d.]+)/);
+        if (t && duration) {
+          const secs = Number(t[1]) * 3600 + Number(t[2]) * 60 + Number(t[3]);
+          emit({
+            percent: Math.min(70, Math.round((secs / duration) * 70)),
+            message: 'Detecting slides…',
+          });
+        }
+      },
+    }
+  );
+  const tail = detector.finish();
+  if (tail) candidates.push(tail);
+
+  if (candidates.length === 0) {
+    emit({ percent: 100, message: 'No slides detected' });
+    return null;
+  }
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mytube-slides-'));
+  const slides = [];
+  try {
+    let done = 0;
+    let next = 0;
+    const worker = async () => {
+      while (next < candidates.length) {
+        if (cancelled) throw new Error('Cancelled');
+        const i = next++;
+        const maxT = duration ? Math.max(0, duration - 0.5) : Infinity;
+        const t = Math.min(candidates[i].t, maxT);
+        const out = path.join(tmpDir, `s${String(i + 1).padStart(4, '0')}.jpg`);
+        await run(binDir() + '/ffmpeg', [
+          '-hide_banner',
+          '-ss', String(t),
+          '-i', videoFile,
+          '-frames:v', '1',
+          '-q:v', '2',
+          out,
+        ]);
+        if (fs.existsSync(out) && fs.statSync(out).size > 0) {
+          slides[i] = { file: out, time: t };
+        }
+        done++;
         emit({
-          percent: Math.min(99, Math.round((secs / duration) * 100)),
+          percent: 70 + Math.round((done / candidates.length) * 30),
           message: 'Extracting slides…',
         });
       }
-    },
-  });
+    };
+    await Promise.all(Array.from({ length: 3 }, worker));
+    const kept = slides.filter(Boolean).sort((a, b) => a.time - b.time);
 
-  const files = fs
-    .readdirSync(slidesDir)
-    .filter((f) => /^slide_\d+\.jpg$/.test(f))
-    .sort();
-  const slides = [];
-  files.forEach((file, i) => {
-    const time = times[i] != null ? times[i] : null;
-    const newName =
-      time != null
-        ? `slide_${String(i + 1).padStart(4, '0')}_${fmtTime(time)}.jpg`
-        : file;
-    if (newName !== file) {
-      fs.renameSync(path.join(slidesDir, file), path.join(slidesDir, newName));
-    }
-    slides.push({ file: newName, time });
-  });
-
-  const html = [
-    '<!doctype html><meta charset="utf-8"><title>Slides</title>',
-    '<style>body{font-family:system-ui;background:#111;color:#eee;margin:24px}',
-    '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}',
-    'figure{margin:0}img{width:100%;border-radius:8px}figcaption{color:#999;font-size:13px;margin-top:4px}</style>',
-    `<h1>Slides (${slides.length})</h1><div class="grid">`,
-    ...slides.map(
-      (s) =>
-        `<figure><img src="${s.file}" loading="lazy"><figcaption>${
-          s.time != null ? fmtTime(s.time).replace(/-/g, ':') : ''
-        }</figcaption></figure>`
-    ),
-    '</div>',
-  ].join('\n');
-  fs.writeFileSync(path.join(slidesDir, 'index.html'), html);
-  fs.writeFileSync(
-    path.join(slidesDir, 'slides.json'),
-    JSON.stringify(slides, null, 2)
-  );
-  emit({ percent: 100, message: `Extracted ${slides.length} slides` });
-  return slidesDir;
+    const pdfPath = path.join(folder, 'slides.pdf');
+    buildPdf(
+      pdfPath,
+      kept.map((s) => ({ file: s.file, label: fmtTime(s.time) }))
+    );
+    updateMeta(folder, { slideCount: kept.length });
+    emit({
+      percent: 100,
+      message:
+        kept.length > 1
+          ? `Saved slides.pdf — ${kept.length} slides`
+          : 'Saved slides.pdf — cover only, no slide changes detected',
+    });
+    return { file: pdfPath, count: kept.length };
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 }
 
 async function downloadAll(opts, emit) {
@@ -335,11 +382,10 @@ async function downloadAll(opts, emit) {
         outputs.push(...files);
       } else if (stage === 'slides') {
         if (!videoFile) throw new Error('Slides require the video to be downloaded');
-        const dir = await extractSlides(
-          videoFile, folder, slides.threshold, info.duration, (e) =>
-            emit({ ...base, ...e })
+        const result = await extractSlides(
+          videoFile, folder, info.duration, (e) => emit({ ...base, ...e })
         );
-        outputs.push(dir);
+        if (result) outputs.push(result.file);
       }
     }
   } catch (err) {

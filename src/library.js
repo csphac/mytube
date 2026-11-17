@@ -65,6 +65,7 @@ function inspectFolder(folder) {
   const videoName = files.find((f) => /^video\.(mp4|mkv|webm|mov)$/.test(f));
   const txtName = files.includes('transcript.txt') ? 'transcript.txt' : null;
   const srtName = files.find((f) => /^transcript\..+\.srt$/.test(f));
+  const slidesName = files.find((f) => /^slides.*\.(pdf|pptx)$/i.test(f));
   const slidesDir = path.join(folder, 'slides');
   let slideFiles = [];
   try {
@@ -74,7 +75,8 @@ function inspectFolder(folder) {
       .sort();
   } catch {}
 
-  if (!videoName && !txtName && !srtName && slideFiles.length === 0) return null;
+  if (!videoName && !txtName && !srtName && !slidesName && slideFiles.length === 0)
+    return null;
 
   let meta = null;
   try {
@@ -109,6 +111,8 @@ function inspectFolder(folder) {
       srt: srtName ? path.join(folder, srtName) : null,
     },
     slides: {
+      file: slidesName ? path.join(folder, slidesName) : null,
+      count: meta?.slideCount || slideFiles.length,
       dir: slidesDir,
       files: slideFiles,
       gallery: fs.existsSync(path.join(slidesDir, 'index.html'))
@@ -171,6 +175,15 @@ function writeMeta(folder, info) {
   );
 }
 
+function updateMeta(folder, patch) {
+  const file = path.join(folder, 'meta.json');
+  let meta = {};
+  try {
+    meta = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {}
+  fs.writeFileSync(file, JSON.stringify({ ...meta, ...patch }, null, 2));
+}
+
 module.exports = {
   getRoots,
   addRoot,
@@ -180,4 +193,5 @@ module.exports = {
   readTranscriptPreview,
   deleteItem,
   writeMeta,
+  updateMeta,
 };

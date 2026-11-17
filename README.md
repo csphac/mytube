@@ -1,13 +1,13 @@
 # MyTube
 
-A macOS Electron app that archives YouTube lectures: paste a video URL and it downloads the video, the transcript, and slide images extracted from the frames — then keeps everything in a browsable library.
+A macOS Electron app that archives YouTube lectures: paste a video URL and it downloads the video, the transcript, and the slides packed into a single PDF — then keeps everything in a browsable library.
 
 ## Features
 
 - **Video download** — best available quality, merged into a single `mp4`/`mkv` via yt-dlp + ffmpeg.
 - **Transcripts** — plain-text `transcript.txt` plus per-language `.srt` files, with language selection when multiple tracks exist.
-- **Slides** — JPEG frames captured at scene changes (timestamped filenames) with a generated HTML gallery, ideal for lecture/presentation videos.
-- **Library** — left-hand sidebar of everything downloaded, with a detail view: inline video playback, transcript preview, and slide gallery. Custom output folders are remembered as library roots.
+- **Slides** — a single `slides.pdf`: every slide is captured fully automatically as it appears — including small changes and builds, slow dissolves, and handwritten notes — one PDF page per slide with video timestamps as bookmarks. Nothing to tune. Videos without slides just get a cover frame.
+- **Library** — left-hand sidebar of everything downloaded, with a detail view: inline video playback, transcript preview, and the slide deck. Custom output folders are remembered as library roots.
 - **Delete** — remove downloads you no longer need via the trash icon on a library row (or `Delete…` in the detail view); a confirmation dialog guards the permanent removal of the folder from disk.
 - **Resilient tooling** — yt-dlp is auto-downloaded on first launch and validated with a `--version` probe (corrupt binaries are removed and re-fetched); ffmpeg ships bundled via `ffmpeg-static`.
 
@@ -36,10 +36,7 @@ Downloads land in `~/Downloads/MyTube/<video title>/` by default (or any folder 
 ├── video.mp4              # merged video (mkv/webm/mov possible)
 ├── transcript.txt         # plain text, all selected languages
 ├── transcript.en.srt      # one per selected language
-├── slides/
-│   ├── slide_0001_00-00-00.jpg   # scene-change frames, named by timestamp
-│   ├── slides.json               # frame → timestamp index
-│   └── index.html                # browsable gallery
+├── slides.pdf             # one page per captured frame, timestamp bookmarks
 └── meta.json              # title, channel, duration, thumbnail, date
 ```
 
@@ -48,6 +45,7 @@ Downloads land in `~/Downloads/MyTube/<video title>/` by default (or any folder 
 | Command | What it does |
 | --- | --- |
 | `npm test` | 12 fault-injection regression tests (path escapes, killed connections, hanging servers, corrupt binaries, symlink containment, delete guards, …) |
+| `npm run test:slides` | Pure-Node unit tests for the automatic slide detector (slide decks, builds, handwriting, talking heads, subtitles, scene cuts) and the PDF writer |
 | `npm run test:e2e` | Real end-to-end download of "Me at the zoo" into `test/output/` |
 | `npm run test:ui` | Drives the real UI over Chrome DevTools Protocol: fetch → download → library → detail, with screenshots |
 | `npm run test:ui-delete` | CDP proof of the delete flow: trash icon → dialog → Escape/Cancel → detail Delete → confirm, with screenshots |

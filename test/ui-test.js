@@ -102,7 +102,7 @@ async function main() {
   await evaluate(`document.querySelector('.lib-item .lib-main').click(); true;`);
   await sleep(1500);
   console.log('detail title:', await evaluate(`document.getElementById('d-title').textContent`));
-  console.log('slide img naturalWidth:', await evaluate(`(() => { const i = document.querySelector('#d-slide-grid img'); return i ? i.naturalWidth : -1; })()`));
+  console.log('slide count chip:', await evaluate(`document.getElementById('d-slide-count').textContent`));
   console.log('transcript preview:', await evaluate(`document.getElementById('d-transcript-text').textContent.slice(0, 60)`));
   await shot('ui-06-detail');
 
@@ -112,13 +112,13 @@ async function main() {
 
   console.log('media malformed status (want 400):', await evaluate(`fetch('media://local/%E0%A4%A').then(r => r.status)`));
   console.log('media outside roots status (want 403):', await evaluate(`fetch('media://local/etc/hosts').then(r => r.status)`));
-  console.log('media inside roots status (want 200):', await evaluate(`(async () => { const lib = await window.mytube.libraryList(); const s = lib.items[0].slides; const p = s.dir + '/' + s.files[0]; return fetch('media://local' + p.split('/').map(encodeURIComponent).join('/')).then(r => r.status); })()`));
+  console.log('media inside roots status (want 200):', await evaluate(`(async () => { const lib = await window.mytube.libraryList(); const p = lib.items[0].slides.file; return fetch('media://local' + p.split('/').map(encodeURIComponent).join('/')).then(r => r.status); })()`));
 
   // Closing the window must not kill an in-flight download on macOS.
   const fs = require('fs');
   const os = require('os');
-  const slidesIndex = require('path').join(os.homedir(), 'Downloads/MyTube/Me at the zoo/slides/index.html');
-  const before = fs.statSync(slidesIndex).mtimeMs;
+  const slidesFile = require('path').join(os.homedir(), 'Downloads/MyTube/Me at the zoo/slides.pdf');
+  const before = fs.statSync(slidesFile).mtimeMs;
   await evaluate(`document.getElementById('download-btn').click(); true;`);
   await sleep(1500);
   await Promise.race([send('Target.closeTarget', { targetId: page.id }), sleep(2000)]);
@@ -126,7 +126,7 @@ async function main() {
   for (let i = 0; i < 90; i++) {
     await sleep(1000);
     try {
-      if (fs.statSync(slidesIndex).mtimeMs > before) { completed = true; break; }
+      if (fs.statSync(slidesFile).mtimeMs > before) { completed = true; break; }
     } catch {}
   }
   console.log('download completed after window closed (want true):', completed);
